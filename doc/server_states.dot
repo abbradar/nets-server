@@ -1,0 +1,26 @@
+digraph {
+  connected [label="Подключен"];
+  accepted [label="Принят"];
+  greeted [label="Приветствован"];
+  transaction [label="Транзакция"];
+  data [label="Получение данных"];
+  quit [label="Отключён"];
+
+  connected -> accepted [label="Есть свободные FD"];
+  connected -> quit [label="Сообщение до приветствия"];
+  accepted -> greeted [label="HELO"];
+  accepted -> greeted [label="EHLO"];
+  accepted -> quit [label="QUIT"];
+  greeted -> greeted [label="HELO"];
+  greeted -> greeted [label="EHLO"];
+  greeted -> greeted [label="RSET"];
+  greeted -> quit [label="QUIT"];
+  greeted -> transaction [label="MAIL"];
+  transaction -> transaction [label="RCPT"];
+  transaction -> greeted [label="HELO"];
+  transaction -> greeted [label="EHLO"];
+  transaction -> greeted [label="RSET"];
+  transaction -> quit [label="QUIT"];
+  transaction -> data [label="DATA, при 1+ RCPT"];
+  data -> greeted [label="Конец данных"];
+}

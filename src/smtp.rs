@@ -377,8 +377,11 @@ impl Session {
   }
 
   fn helo(&mut self, domain: &str, ehlo: bool) -> Reply {
-    let SockAddr::Inet(addr) = socket::getpeername(self.fd).unwrap();
-    let domain = match addr {
+    let addr = match socket::getpeername(self.fd).unwrap() {
+      SockAddr::Inet(a) => a,
+      _ => panic!("Not an IP address"),
+    };
+    let rev_domain1 = match addr {
       InetAddr::V4(v4) => {
         const offsets: &'static [u32] = &[0, 8, 16, 24];
         let mut s = String::new();
@@ -392,24 +395,26 @@ impl Session {
       InetAddr::V6(v6) => {
         let mut s = String::new();
         for oct in v6.sin6_addr.s6_addr.iter().rev() {
-          s = format!("{}{}.{}", s, oct >> 8, oct & 0xF);
+          s = format!("{}{:x}.{:x}.", s, oct >> 4, oct & 0xF);
         }
         s.push_str("ip6.arpa");
         s
       },
     };
-    let raw_res_r = resolv::res_search(&CString::new(domain).unwrap(), ResClass::In, ResType::PTR);
+    let rev_domain = "3.204.180.213.in-addr.arpa";
+    println!("rev_domain: {}", rev_domain);
+    let raw_res_r = resolv::res_search(&CString::new(rev_domain).unwrap(), ResClass::In, ResType::PTR);
     match raw_res_r {
       Ok(raw_res) => {
-        // XXX: We shouldn't fail here, so let's crash if we do.
-        let msg = NSMsg::initparse(&raw_res[..]).unwrap();
-        //for i in 0..msg.msg_count(NSSect::AN_PR) {
-        //  let rr = msg.parserr(NSSect::AN_PR, i).unwrap();
-        //  println!("PTR answer: {}", resolv::print(&msg, &rr, None, None).unwrap());
-        //}
+        // XXX: We shouldn't fail here unless DNS servers are bogus, so let's crash if we do.
+        let mut msg = NSMsg::initparse(&raw_res[..]).unwrap();
+        for i in 0..msg.msg_count(NSSect::AN_PR) {
+          let rr = msg.parserr(NSSect::AN_PR, i).unwrap();
+          println!("PTR answer: {}", resolv::print(&msg, &rr, None, None).unwrap());
+        }
       },
       Err(e) => {
-        //self.log('E', &format!("Cannot resolve DNS PTR hostname: {}", e));
+        self.log('E', &format!("Cannot resolve DNS PTR hostname: {}", e));
       }
     }
     self.domain = Some(domain.to_owned());

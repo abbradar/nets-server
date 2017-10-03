@@ -7,6 +7,7 @@ use nix::Errno;
 use nix::errno::ErrnoSentinel;
 
 mod ffi {
+  use std::ffi::CStr;
   pub use libc::{c_char, c_int, c_uchar, c_void};
 
   const NS_S_MAX: usize = 4;
@@ -18,7 +19,7 @@ mod ffi {
     _id: u16,
     _flags: u16,
     _counts: [u16; NS_S_MAX],
-    _sections: [u8; NS_S_MAX],
+    _sections: [*const c_uchar; NS_S_MAX],
     _sect: c_int,
     _rrnum: c_int,
     _msg_ptr: *const c_uchar,
@@ -36,8 +37,9 @@ mod ffi {
     rdata: *const c_uchar
   }
 
-  extern {
-    pub fn res_search(dname: *const c_char,
+  #[link(name="resolv")]
+  extern "C" {
+    pub fn __res_search(dname: *const c_char,
                       class: c_int,
                       rtype: c_int,
                       answer: *mut c_uchar,
@@ -66,6 +68,11 @@ mod ffi {
     }
   }
   
+  impl CNSRr {
+    pub fn name(&self) -> &CStr {
+      unsafe { CStr::from_ptr(self.name.as_ptr()) }
+    }
+  }
 }
 
 // Helper function to get a Result
@@ -146,12 +153,12 @@ pub fn res_search(dname: &CString, class: ResClass, rtype: ResType) -> Result<Ve
   const PACKETSZ: usize = 512;
   let buf = [0 as u8; PACKETSZ];
   let res = unsafe {
-    ffi::res_search(dname.as_ptr(),
-                    class as c_int,
-                    rtype as c_int,
-                    buf.as_ptr() as *mut c_uchar,
-                    PACKETSZ as c_int
-                    )
+    ffi::__res_search(dname.as_ptr(),
+                      class as c_int,
+                      rtype as c_int,
+                      buf.as_ptr() as *mut c_uchar,
+                      PACKETSZ as c_int
+                      )
   };
   result(res).map(|len| { Vec::from(&buf[..len as usize]) })
 }
@@ -175,6 +182,12 @@ impl NSMsg {
       ffi::ns_parserr(&mut self.c as *mut ffi::CNSMsg, section as c_int, rrnum as c_int, &mut rr as *mut ffi::CNSRr)
     };
     result(res).map(|_| NSRr { c: rr })
+  }
+}
+
+impl NSRr {
+  pub fn name(&self) -> &str {
+    self.c.name().to_str().unwrap()
   }
 }
 

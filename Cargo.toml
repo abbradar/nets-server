@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Nikolay Amiantov <ab@fmap.me>"]
 
 [dependencies]
-nix = { path = "../../cgate/deps/nix-rust", version = "^0.5.0" }
+nix = { path = "../../cgate/deps/nix-rust", version = "^0.5.0-pre" }
 libc = "^0.2.7"
 regex = "^0.1.46"
 lazy_static = "^0.1.15"

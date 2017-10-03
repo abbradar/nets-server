@@ -1,0 +1,11 @@
+{
+  "deliverydir": "/tmp/nets/delivery",
+  "queuedir": "/tmp/nets/queue",
+  "tmpdir": "/tmp/nets/tmp",
+  "origin": "myhost.local",
+  "timeout": 15000,
+  "nthreads": 4,
+  "port": 1625,
+  "queues_len": 4
+}
+

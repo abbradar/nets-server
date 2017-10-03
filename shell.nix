@@ -1,11 +1,11 @@
 { mypkgs ? import /home/shlomo/cgate { } }:
 
-mypkgs.callPackage ({ stdenv, rust }:
+mypkgs.callPackage ({ stdenv, pkgconfig, rust }:
 
 stdenv.mkDerivation {
   name = "smtp-server";
 
-  buildInputs = [ ]
+  buildInputs = [ pkgconfig ]
              ++ (with rust; [ rustc cargo ]);
 }
 
